@@ -32,7 +32,7 @@ max dt (spring stiffness=1000) | ~2e-3 | ~8e-3 | ~0.02 | ~0.03 | ~0.15
 
 **\*\*** energy (mgh + mv^2 / 2 + kΔx^2 / 2) stableness = moving average rate of (energy at step **t** / energy at step **t-100**) after the movement of springs becomes small and before the spring hits the ground.
 
-Gifs
+GIFs
 Forward Euler | RK2 | RK3 
 ----- | ------ | ----
 <img src="https://github.com/hakic/GAME201_HW1/blob/master/forward_euler.gif?raw=true" width="400"> | <img src="https://github.com/hakic/GAME201_HW1/blob/master/RK2.gif?raw=true" width="400"> | <img src="https://github.com/hakic/GAME201_HW1/blob/master/RK3.gif?raw=true" width="400">
