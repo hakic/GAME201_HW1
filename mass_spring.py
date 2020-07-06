@@ -7,8 +7,8 @@ ti.init(arch=ti.gpu)
 max_num_particles = 256
 
 # From 1 to 4.
-rk_number = 4
-run_explicit_substep = True
+rk_number = 1
+run_explicit_substep = False
 num_jacobi_iteration = 20
 
 dt = ti.var(ti.f32, shape=())
@@ -367,9 +367,9 @@ while True:
             moving_step_latency = get_moving_average(moving_step_latency, tt * 1000000)
 
             ee = energy[None] + 1e-8
-            moving_energy_rate = get_moving_average(moving_energy_rate, ee / energy_buffer[energy_buffer_index])
-            energy_buffer[energy_buffer_index] = ee
-            energy_buffer_index = (energy_buffer_index + 1) % 100
+            moving_energy_rate = get_moving_average(moving_energy_rate, ee / energy_buffer[energy_buffer_index % 100])
+            energy_buffer[energy_buffer_index % 100] = ee
+            energy_buffer_index += 1
 
     X = x.to_numpy()
     gui.circles(X[:num_particles[None]], color=0xffaa77, radius=5)
@@ -387,4 +387,7 @@ while True:
     gui.text(content=f'Jacob R {total_r[None]:.2f}', pos=(0, 0.75), color=0x0)
     gui.text(content=f'Step latency (microsecond) {moving_step_latency:.2f}', pos=(0, 0.7), color=0x0)
     gui.text(content=f'Dt (second) {dt[None]:.5f}', pos=(0, 0.65), color=0x0)
-    gui.show()
+
+    filename = 'frame_{:05d}.png'.format(energy_buffer_index // 10)   # create filename with suffix png
+    print('Frame {} is recorded in {}'.format(energy_buffer_index // 10, filename))
+    gui.show(filename)
