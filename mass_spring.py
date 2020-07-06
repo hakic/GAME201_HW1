@@ -6,12 +6,12 @@ ti.init(arch=ti.gpu)
 
 max_num_particles = 256
 
-dt = 1e-3
 # From 1 to 4.
-rk_number = 1
-run_explicit_substep = False
+rk_number = 4
+run_explicit_substep = True
 num_jacobi_iteration = 20
 
+dt = ti.var(ti.f32, shape=())
 num_particles = ti.var(ti.i32, shape=())
 spring_stiffness = ti.var(ti.f32, shape=())
 energy = ti.var(ti.f32, shape=())
@@ -84,18 +84,18 @@ def explicit_euler(vec, n):
     for i in range(2 * n):
         k1[i] = fn(vec, n, i)
     for i in range(2 * n):
-        vec[i] += k1[i] * dt
+        vec[i] += k1[i] * dt[None]
 
 @ti.func
 def RK2(vec, n):
     for i in range(2 * n):
         k1[i] = fn(vec, n, i)
     for i in range(2 * n):
-        temp[i] = vec[i] + k1[i] * dt
+        temp[i] = vec[i] + k1[i] * dt[None]
     for i in range(2 * n):
         k2[i] = fn(temp, n, i)
     for i in range(2 * n):
-        vec[i] += 0.5 * dt * (k1[i] + k2[i])
+        vec[i] += 0.5 * dt[None] * (k1[i] + k2[i])
 
 
 @ti.func
@@ -103,15 +103,15 @@ def RK3(vec, n):
     for i in range(2 * n):
         k1[i] = fn(vec, n, i)
     for i in range(2 * n):
-        temp[i] = vec[i] + 0.5 * k1[i] * dt
+        temp[i] = vec[i] + 0.5 * k1[i] * dt[None]
     for i in range(2 * n):
         k2[i] = fn(temp, n, i)
     for i in range(2 * n):
-        temp[i] = vec[i] - dt * k1[i] + 2.0 * dt * k2[i]
+        temp[i] = vec[i] - dt[None] * k1[i] + 2.0 * dt[None] * k2[i]
     for i in range(2 * n):
         k3[i] = fn(temp, n, i)
     for i in range(2 * n):
-        vec[i] += 1.0 / 6.0 * dt * (k1[i] + 4 * k2[i] + k3[i])
+        vec[i] += 1.0 / 6.0 * dt[None] * (k1[i] + 4 * k2[i] + k3[i])
 
 
 @ti.func
@@ -119,19 +119,19 @@ def RK4(vec, n):
     for i in range(2 * n):
         k1[i] = fn(vec, n, i)
     for i in range(2 * n):
-        temp[i] = vec[i] + 0.5 * k1[i] * dt
+        temp[i] = vec[i] + 0.5 * k1[i] * dt[None]
     for i in range(2 * n):
         k2[i] = fn(temp, n, i)
     for i in range(2 * n):
-        temp[i] = vec[i] + 0.5 * k2[i] * dt
+        temp[i] = vec[i] + 0.5 * k2[i] * dt[None]
     for i in range(2 * n):
         k3[i] = fn(temp, n, i)
     for i in range(2 * n):
-        temp[i] = vec[i] + dt * k3[i]
+        temp[i] = vec[i] + dt[None] * k3[i]
     for i in range(2 * n):
         k4[i] = fn(temp, n, i)
     for i in range(2 * n):
-        vec[i] += 1.0 / 6.0 * dt * (k1[i] + 2 * k2[i] + 2 * k3[i] + 2 * k4[i])
+        vec[i] += 1.0 / 6.0 * dt[None] * (k1[i] + 2 * k2[i] + 2 * k3[i] + 2 * k4[i])
 
 
 @ti.kernel
@@ -139,7 +139,7 @@ def pre_update():
     # Compute force and new velocity
     n = num_particles[None]
     for i in range(n):
-        v[i] *= ti.exp(-dt * damping[None])  # damping
+        v[i] *= ti.exp(-dt[None] * damping[None])  # damping
 
 
 @ti.kernel
@@ -237,12 +237,12 @@ def post_implicit_forward_y():
 
     for i, j in ti.ndrange(2 * n, 2 * n):
         if i == j:
-            linear_A[i, j] = 1.0 - dt * dt / particle_mass * linear_A[i, j]
+            linear_A[i, j] = 1.0 - dt[None] * dt[None] / particle_mass * linear_A[i, j]
         else:
-            linear_A[i, j] = -dt * dt / particle_mass * linear_A[i, j]
+            linear_A[i, j] = -dt[None] * dt[None] / particle_mass * linear_A[i, j]
 
     for i in range(n):
-        temp[i] = v[i] + force(x, n, i) / particle_mass * dt
+        temp[i] = v[i] + force(x, n, i) / particle_mass * dt[None]
         linear_b[2 * i] = temp[i].x
         linear_b[2 * i + 1] = temp[i].y
 
@@ -276,7 +276,7 @@ def implicit_substep_post():
         v[i].x = linear_X[2 * i]
         v[i].y = linear_X[2 * i + 1]
     for i in range(n):
-        x[i] += dt * v[i]
+        x[i] += dt[None] * v[i]
 
 
 @ti.kernel
@@ -298,6 +298,7 @@ gui = ti.GUI('Mass Spring System', res=(1024, 1024), background_color=0xdddddd)
 
 spring_stiffness[None] = 1000.0
 damping[None] = 20.0
+dt[None] = 1e-3
 
 # new_particle(0.3, 0.6)
 # new_particle(0.3, 0.7)
@@ -327,6 +328,11 @@ while True:
                 damping[None] /= 1.1
             else:
                 damping[None] *= 1.1
+        elif e.key == 't':
+            if gui.is_pressed('Shift'):
+                dt[None] /= 1.1
+            else:
+                dt[None] *= 1.1
 
     if not paused[None]:
         for step in range(10):
@@ -380,4 +386,5 @@ while True:
     gui.text(content=f'Energy change rate {moving_energy_rate:.2f}', pos=(0, 0.8), color=0x0)
     gui.text(content=f'Jacob R {total_r[None]:.2f}', pos=(0, 0.75), color=0x0)
     gui.text(content=f'Step latency (microsecond) {moving_step_latency:.2f}', pos=(0, 0.7), color=0x0)
+    gui.text(content=f'Dt (second) {dt[None]:.5f}', pos=(0, 0.65), color=0x0)
     gui.show()
