@@ -21,7 +21,7 @@ More details:
   * dt = 1e-3
 
 Comparsion
-\ |Forward Euler | RK2 | RK3 | RK4 | implicit euler
+\ |Forward Euler | RK2 | RK3 | RK4 | Implicit euler
 ---- | ----- | ------ | ---- | ---- | --------
 latency per step | ~0.4ms | ~0.5ms | ~0.6ms | ~0.6ms | ~5m (~3m w/o auto-grad computing time)
 energy stableness **\*** | 0.92 | 0.92 | 0.92 | 0.90 | 0.98
