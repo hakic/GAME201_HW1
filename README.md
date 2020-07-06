@@ -39,7 +39,7 @@ Forward Euler | RK2 | RK3
 
 RK4 |  Implicit euler
 ----- | ------
-<img src="https://github.com/hakic/GAME201_HW1/blob/master/RK4.gif?raw=true" width="300"> | <img src="https://github.com/hakic/GAME201_HW1/blob/master/implicit_euler.gif?raw=true" width="300">
+<img src="https://github.com/hakic/GAME201_HW1/blob/master/RK4.gif?raw=true" width="400"> | <img src="https://github.com/hakic/GAME201_HW1/blob/master/implicit_euler.gif?raw=true" width="400">
 
 Fun facts:
 * First time to use github
