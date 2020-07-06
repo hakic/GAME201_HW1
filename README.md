@@ -24,9 +24,9 @@ Comparsion
 \ |Forward Euler | RK2 | RK3 | RK4 | Implicit euler
 ---- | ----- | ------ | ---- | ---- | --------
 latency per step **\*** | ~0.4ms | ~0.5ms | ~0.6ms | ~0.7ms | ~5m (~3m w/o auto-grad computing time)
-energy stableness **\*\*** | ~0.92 | ~0.92 | ~0.92 | ~0.90 | ~0.98
-max spring stiffness | ~7,500 | ~45,000 | ~300,000 | ~500,000 | ~300,000 (similar value for #iteration=50)
-max dt (spring stiffness=1000) | ~2e-3 | ~8e-3 | ~0.02 | ~0.025 | ~0.15
+energy stableness **\*\*** | ~0.92 | ~0.92 | ~0.92 | ~0.92 | ~0.98
+max spring stiffness | ~7,500 | ~45,000 | ~300,000 | ~700,000 | ~300,000 (similar value for #iteration=50)
+max dt (spring stiffness=1000) | ~2e-3 | ~8e-3 | ~0.02 | ~0.03 | ~0.15
 
 **\*** environment (windows 10, ram=16G, cpu=AMD Ryzen 1700X, gpu=Nvidia GTX 1700Ti)
 
