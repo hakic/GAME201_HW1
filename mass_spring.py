@@ -132,7 +132,7 @@ def RK4(vec, n):
     for i in range(2 * n):
         k4[i] = fn(temp, n, i)
     for i in range(2 * n):
-        vec[i] += 1.0 / 6.0 * dt[None] * (k1[i] + 2 * k2[i] + 2 * k3[i] + 2 * k4[i])
+        vec[i] += 1.0 / 6.0 * dt[None] * (k1[i] + 2 * k2[i] + 2 * k3[i] + k4[i])
 
 
 @ti.kernel
