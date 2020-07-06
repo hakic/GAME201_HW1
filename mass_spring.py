@@ -4,6 +4,7 @@ import time
 
 ti.init(arch=ti.gpu)
 
+dump_image = False
 max_num_particles = 256
 
 # From 1 to 4.
@@ -388,6 +389,9 @@ while True:
     gui.text(content=f'Step latency (microsecond) {moving_step_latency:.2f}', pos=(0, 0.7), color=0x0)
     gui.text(content=f'Dt (second) {dt[None]:.5f}', pos=(0, 0.65), color=0x0)
 
-    filename = 'frame_{:05d}.png'.format(energy_buffer_index // 10)   # create filename with suffix png
-    print('Frame {} is recorded in {}'.format(energy_buffer_index // 10, filename))
-    gui.show(filename)
+    if dump_image:
+        filename = 'frame_{:05d}.png'.format(energy_buffer_index // 10)   # create filename with suffix png
+        print('Frame {} is recorded in {}'.format(energy_buffer_index // 10, filename))
+        gui.show(filename)
+    else:
+        gui.show()
