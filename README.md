@@ -13,7 +13,7 @@ Implicit euler, implemented
 
 More details:
 * Code was based on **mass_spring_explicit.py** example.
-* Moved "Collide with ground" to after "Compute new position" because my explicit code updates *x* and *v* at the same time (I didn't know the difference)
+* Moved "Collide with ground" to after "Compute new position" because my explicit code updates *x* and *v* at the same time (I didn't know whether this was acceptable or not)
 * Didn't know how to compute gradient in implicit euler. Used auto-grad in **taichi** to compute the gradient.
 * Settings:
   * #particles = 10
