@@ -1,13 +1,16 @@
 import random
 import taichi as ti
+import time
 
 ti.init(arch=ti.gpu)
 
 max_num_particles = 256
 
 dt = 1e-3
-rk_number = 4
+# From 1 to 4.
+rk_number = 1
 run_explicit_substep = False
+num_jacobi_iteration = 20
 
 num_particles = ti.var(ti.i32, shape=())
 spring_stiffness = ti.var(ti.f32, shape=())
@@ -42,6 +45,16 @@ rest_length = ti.var(ti.f32, shape=(max_num_particles, max_num_particles))
 
 connection_radius = 0.15
 gravity = [0, -9.8]
+
+moving_step_latency = 0.0
+moving_energy_rate = 0.0
+
+energy_buffer_index = 0
+energy_buffer = [1000.0] * 100
+
+
+def get_moving_average(old, new):
+    return old * 0.99 + new * 0.01
 
 
 @ti.func
@@ -136,7 +149,7 @@ def post_update():
     for i in range(n):
         if x[i].y < bottom_y:
             x[i].y = bottom_y
-            v[i].y = 0
+            v[i].y = -v[i].y
 
     energy[None] = 0.0
     for i in range(n):
@@ -147,7 +160,7 @@ def post_update():
             if rest_length[i, j] != 0:
                 x_ij = vec[i] - vec[j]
                 s = ti.Vector([x_ij.norm() - rest_length[i, j]])
-                # A spring is counted twice. So use another 0.5.
+                # A spring is counted twice. So multiply by another 0.5.
                 r[0] += 0.5 * 0.5 * spring_stiffness[None] * s[0] * s[0]
         energy[None] += r[0]
 
@@ -193,9 +206,9 @@ def implicit_forward_x(n: ti.i32):
     for i, j in ti.ndrange(n, n):
         if rest_length[i, j] != 0:
             x_ij = x[j] - grad[i, j]
-            fake_loss[None] += ((x_ij.norm() - rest_length[i, j]) * x_ij.normalized()).x
+            fake_loss[None] += ((x_ij.norm(eps=1e-5) - rest_length[i, j]) * x_ij.normalized(eps=1e-5)).x
             x_ij = grad[i, i] - x[j]
-            fake_loss[None] += ((x_ij.norm() - rest_length[i, j]) * x_ij.normalized()).x
+            fake_loss[None] += ((x_ij.norm(eps=1e-5) - rest_length[i, j]) * x_ij.normalized(eps=1e-5)).x
 
 
 @ti.kernel
@@ -203,9 +216,9 @@ def implicit_forward_y(n: ti.i32):
     for i, j in ti.ndrange(n, n):
         if rest_length[i, j] != 0:
             x_ij = x[j] - grad[i, j]
-            fake_loss[None] += ((x_ij.norm() - rest_length[i, j]) * x_ij.normalized()).y
+            fake_loss[None] += ((x_ij.norm(eps=1e-5) - rest_length[i, j]) * x_ij.normalized(eps=1e-5)).y
             x_ij = grad[i, i] - x[j]
-            fake_loss[None] += ((x_ij.norm() - rest_length[i, j]) * x_ij.normalized()).y
+            fake_loss[None] += ((x_ij.norm(eps=1e-5) - rest_length[i, j]) * x_ij.normalized(eps=1e-5)).y
 
 
 @ti.kernel
@@ -222,22 +235,14 @@ def post_implicit_forward_y():
         linear_A[2 * i, 2 * j + 1] = -spring_stiffness[None] * grad.grad[i, j].x
         linear_A[2 * i + 1, 2 * j + 1] = -spring_stiffness[None] * grad.grad[i, j].y
 
-    # for i, j in ti.ndrange(2 * n, 2 * n):
-    #     print('A', i, j, linear_A[i, j])
-
     for i, j in ti.ndrange(2 * n, 2 * n):
         if i == j:
             linear_A[i, j] = 1.0 - dt * dt / particle_mass * linear_A[i, j]
         else:
             linear_A[i, j] = -dt * dt / particle_mass * linear_A[i, j]
 
-    # for i, j in ti.ndrange(2 * n, 2 * n):
-    #     print('updated_A', i, j, linear_A[i, j])
-
     for i in range(n):
-        # print('v', i, v[i])
         temp[i] = v[i] + force(x, n, i) / particle_mass * dt
-        # print('b', i, temp[i])
         linear_b[2 * i] = temp[i].x
         linear_b[2 * i + 1] = temp[i].y
 
@@ -250,7 +255,7 @@ def implicit_substep_pre():
         linear_X[2 * i + 1] = v[i].y
 
 @ti.kernel
-def jacob_iterate():
+def jacobi_iterate():
     n = num_particles[None]
     total_r[None] = 0.0
     for i in range(2 * n):
@@ -294,11 +299,12 @@ gui = ti.GUI('Mass Spring System', res=(1024, 1024), background_color=0xdddddd)
 spring_stiffness[None] = 1000.0
 damping[None] = 20.0
 
-new_particle(0.3, 0.3)
-new_particle(0.3, 0.4)
-new_particle(0.4, 0.4)
-# for i in range(20):
-#     new_particle(random.random() * 0.6 + 0.3, random.random() * 0.3 + 0.6)
+# new_particle(0.3, 0.6)
+# new_particle(0.3, 0.7)
+# new_particle(0.4, 0.7)
+random.seed(2020)
+for i in range(20):
+    new_particle(random.random() * 0.3 + 0.4, random.random() * 0.3 + 0.6)
 
 while True:
     for e in gui.get_events(ti.GUI.PRESS):
@@ -324,6 +330,8 @@ while True:
 
     if not paused[None]:
         for step in range(10):
+            tt = time.time()
+            ss = 0.0
             pre_update()
             if run_explicit_substep:
                 explicit_substep()
@@ -331,6 +339,8 @@ while True:
                 # Get gradient
                 pre_implicit_forward()
                 n = num_particles[None]
+                ss = time.time()
+                # TODO: compute gradients of x and y in one pass.
                 reset_loss()
                 with ti.Tape(loss=fake_loss):
                     implicit_forward_x(n)
@@ -339,13 +349,21 @@ while True:
                 with ti.Tape(loss=fake_loss):
                     implicit_forward_y(n)
                 post_implicit_forward_y()
+                ss = time.time() - ss
 
                 implicit_substep_pre()
-                for i in range(20):
-                    jacob_iterate()
+                for i in range(num_jacobi_iteration):
+                    jacobi_iterate()
                 implicit_substep_post()
 
             post_update()
+            tt = time.time() - tt - ss
+            moving_step_latency = get_moving_average(moving_step_latency, tt * 1000000)
+
+            ee = energy[None] + 1e-8
+            moving_energy_rate = get_moving_average(moving_energy_rate, ee / energy_buffer[energy_buffer_index])
+            energy_buffer[energy_buffer_index] = ee
+            energy_buffer_index = (energy_buffer_index + 1) % 100
 
     X = x.to_numpy()
     gui.circles(X[:num_particles[None]], color=0xffaa77, radius=5)
@@ -359,7 +377,7 @@ while True:
     gui.text(content=f'C: clear all; Space: pause', pos=(0, 0.95), color=0x0)
     gui.text(content=f'S: Spring stiffness {spring_stiffness[None]:.1f}', pos=(0, 0.9), color=0x0)
     gui.text(content=f'D: damping {damping[None]:.2f}', pos=(0, 0.85), color=0x0)
-    gui.text(content=f'Energy {energy[None]:.2f}', pos=(0, 0.8), color=0x0)
+    gui.text(content=f'Energy change rate {moving_energy_rate:.2f}', pos=(0, 0.8), color=0x0)
     gui.text(content=f'Jacob R {total_r[None]:.2f}', pos=(0, 0.75), color=0x0)
+    gui.text(content=f'Step latency (microsecond) {moving_step_latency:.2f}', pos=(0, 0.7), color=0x0)
     gui.show()
-
