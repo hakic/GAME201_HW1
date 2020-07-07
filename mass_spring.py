@@ -4,12 +4,12 @@ import time
 
 ti.init(arch=ti.gpu)
 
-dump_image = False
+dump_image = True
 max_num_particles = 256
 
+run_explicit_euler = False
 # From 1 to 4.
 rk_number = 1
-run_explicit_substep = False
 num_jacobi_iteration = 20
 
 dt = ti.var(ti.f32, shape=())
@@ -33,6 +33,7 @@ k4 = ti.Vector(2, dt=ti.f32, shape=2 * max_num_particles)
 temp = ti.Vector(2, dt=ti.f32, shape=2 * max_num_particles)
 
 fake_loss = ti.var(dt=ti.f32, shape=(), needs_grad=True)
+# grad[i, j] is gradient of f_i over x_j.
 grad = ti.Vector(2, dt=ti.f32, shape=(max_num_particles, max_num_particles), needs_grad=True)
 
 linear_A = ti.var(dt=ti.f32, shape=(2 * max_num_particles, 2 * max_num_particles))
@@ -194,7 +195,7 @@ def explicit_substep():
 def pre_implicit_forward():
     n = num_particles[None]
     for i, j in ti.ndrange(n, n):
-        grad[i, j] = x[i]
+        grad[j, i] = x[i]
         linear_A[i, j] = 0.0
 
 @ti.kernel
@@ -206,7 +207,7 @@ def reset_loss():
 def implicit_forward_x(n: ti.i32):
     for i, j in ti.ndrange(n, n):
         if rest_length[i, j] != 0:
-            x_ij = x[j] - grad[i, j]
+            x_ij = x[j] - grad[j, i]
             fake_loss[None] += ((x_ij.norm(eps=1e-5) - rest_length[i, j]) * x_ij.normalized(eps=1e-5)).x
             x_ij = grad[i, i] - x[j]
             fake_loss[None] += ((x_ij.norm(eps=1e-5) - rest_length[i, j]) * x_ij.normalized(eps=1e-5)).x
@@ -216,7 +217,7 @@ def implicit_forward_x(n: ti.i32):
 def implicit_forward_y(n: ti.i32):
     for i, j in ti.ndrange(n, n):
         if rest_length[i, j] != 0:
-            x_ij = x[j] - grad[i, j]
+            x_ij = x[j] - grad[j, i]
             fake_loss[None] += ((x_ij.norm(eps=1e-5) - rest_length[i, j]) * x_ij.normalized(eps=1e-5)).y
             x_ij = grad[i, i] - x[j]
             fake_loss[None] += ((x_ij.norm(eps=1e-5) - rest_length[i, j]) * x_ij.normalized(eps=1e-5)).y
@@ -229,6 +230,7 @@ def post_implicit_forward_x():
         linear_A[2 * i, 2 * j] = -spring_stiffness[None] * grad.grad[i, j].x
         linear_A[2 * i + 1, 2 * j] = -spring_stiffness[None] * grad.grad[i, j].y
 
+
 @ti.kernel
 def post_implicit_forward_y():
     n = num_particles[None]
@@ -236,6 +238,9 @@ def post_implicit_forward_y():
         linear_A[2 * i, 2 * j + 1] = -spring_stiffness[None] * grad.grad[i, j].x
         linear_A[2 * i + 1, 2 * j + 1] = -spring_stiffness[None] * grad.grad[i, j].y
 
+
+@ti.kernel
+def compute_linear_equation_A_and_b():
     for i, j in ti.ndrange(2 * n, 2 * n):
         if i == j:
             linear_A[i, j] = 1.0 - dt[None] * dt[None] / particle_mass * linear_A[i, j]
@@ -340,12 +345,13 @@ while True:
             tt = time.time()
             ss = 0.0
             pre_update()
-            if run_explicit_substep:
+            if run_explicit_euler:
                 explicit_substep()
             else:
                 # Get gradient
                 pre_implicit_forward()
                 n = num_particles[None]
+
                 ss = time.time()
                 # TODO: compute gradients of x and y in one pass.
                 reset_loss()
@@ -357,6 +363,8 @@ while True:
                     implicit_forward_y(n)
                 post_implicit_forward_y()
                 ss = time.time() - ss
+
+                compute_linear_equation_A_and_b()
 
                 implicit_substep_pre()
                 for i in range(num_jacobi_iteration):
