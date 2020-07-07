@@ -4,7 +4,7 @@ import time
 
 ti.init(arch=ti.gpu)
 
-dump_image = True
+dump_image = False
 max_num_particles = 256
 
 run_explicit_euler = False
