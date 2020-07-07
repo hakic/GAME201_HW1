@@ -35,7 +35,7 @@ max dt (spring stiffness=1000) | ~2e-3 | ~8e-3 | ~0.02 | ~0.03 | ~0.15
 
 **\*\*\*** Record rate after the rate becomes stable.
 
-GIFs
+GIFs (damping = 20.0)
 Forward Euler | RK2 | RK3 
 ----- | ------ | ----
 <img src="https://github.com/hakic/GAME201_HW1/blob/master/forward_euler.gif?raw=true" width="400"> | <img src="https://github.com/hakic/GAME201_HW1/blob/master/RK2.gif?raw=true" width="400"> | <img src="https://github.com/hakic/GAME201_HW1/blob/master/RK3.gif?raw=true" width="400">
@@ -43,3 +43,12 @@ Forward Euler | RK2 | RK3
 RK4 |  Implicit euler
 ----- | ------
 <img src="https://github.com/hakic/GAME201_HW1/blob/master/RK4.gif?raw=true" width="400"> | <img src="https://github.com/hakic/GAME201_HW1/blob/master/implicit_euler.gif?raw=true" width="400">
+
+GIFs (damping = 0.0)
+Forward Euler | RK2 | RK3 
+----- | ------ | ----
+<img src="https://github.com/hakic/GAME201_HW1/blob/master/forward_euler_damping_0.gif?raw=true" width="400"> | <img src="https://github.com/hakic/GAME201_HW1/blob/master/RK2_damping_0.gif?raw=true" width="400"> | <img src="https://github.com/hakic/GAME201_HW1/blob/master/RK3_damping_0.gif?raw=true" width="400">
+
+RK4 |  Implicit euler
+----- | ------
+<img src="https://github.com/hakic/GAME201_HW1/blob/master/RK4_damping_0.gif?raw=true" width="400"> | <img src="https://github.com/hakic/GAME201_HW1/blob/master/implicit_euler_damping_0.gif?raw=true" width="400">
