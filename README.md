@@ -35,6 +35,12 @@ max dt (spring stiffness=1000) | ~2e-3 | ~8e-3 | ~0.02 | ~0.03 | ~0.15
 
 **\*\*\*** Record rate after the rate becomes stable.
 
+## Observation
+* When damping exists, energy stableness of implicit euler is better; otherwise, all methods are great.
+* When damping exists, all simulation looks similar; otherwise, all looks different (please check the following GIFs)
+* RK3 / RK4 / implicit euler provide good max spring stiffness.
+* Implicit euler provides much better max dt.
+
 GIFs (damping = 20.0)
 Forward Euler | RK2 | RK3 
 ----- | ------ | ----
