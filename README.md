@@ -31,7 +31,7 @@ max dt (spring stiffness=1000) | ~2e-3 | ~8e-3 | ~0.02 | ~0.03 | ~0.15
 
 **\*** environment (windows 10, ram=16G, cpu=AMD Ryzen 1700X, gpu=Nvidia GTX 1700Ti)
 
-**\*\*** energy (mgh + mv^2 / 2 + kΔx^2 / 2) stableness = moving average rate of (energy at step **t** / energy at step **t-100**) after the rate becomes stable and before the spring hits the ground (the rate is ~1.0 after hitting the ground)
+**\*\*** energy (mgh + mv^2 / 2 + kΔx^2 / 2) stableness = moving average rate of (energy at step **t** / energy at step **t-100**) after the rate becomes stable and before the springs hit the ground (the rate is ~1.0 after the springs hit the ground)
 
 **\*\*\*** Record rate after the rate becomes stable.
 
